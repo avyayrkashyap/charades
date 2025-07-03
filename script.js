@@ -159,6 +159,216 @@ function typewriterEffect(element, text, speed = 0.04) {
   });
 }
 
+function ditherPosterOut(oldImg, onComplete) {
+  if (window.gsap && oldImg) {
+    gsap.to(oldImg, {
+      filter: 'contrast(200%) brightness(50%) saturate(300%) hue-rotate(180deg)',
+      opacity: 0,
+      duration: 0.8,
+      ease: 'power2.in',
+      onComplete: () => {
+        if (oldImg.parentNode) {
+          oldImg.parentNode.removeChild(oldImg);
+        }
+        if (onComplete) onComplete();
+      }
+    });
+  } else {
+    // Fallback without GSAP
+    if (oldImg && oldImg.parentNode) {
+      oldImg.parentNode.removeChild(oldImg);
+    }
+    if (onComplete) onComplete();
+  }
+}
+
+function createParticleMorph(oldPosterUrl, newPosterUrl, newMovie) {
+  // Create particle container
+  const particleContainer = document.createElement('div');
+  particleContainer.className = 'particle-container';
+  particleContainer.style.cssText = `
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+  `;
+  
+  // Create old poster particles
+  const oldParticles = [];
+  const particleCount = 50; // Number of particles
+  
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'morph-particle';
+    particle.style.cssText = `
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: url('${oldPosterUrl}') no-repeat;
+      background-size: 100% 100%;
+      border-radius: 50%;
+      pointer-events: none;
+    `;
+    
+    // Random initial position
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+    particle.style.left = x + '%';
+    particle.style.top = y + '%';
+    
+    oldParticles.push(particle);
+    particleContainer.appendChild(particle);
+  }
+  
+  posterCarousel.appendChild(particleContainer);
+  
+  // Phase 1: Scatter particles
+  if (window.gsap) {
+    const scatterTl = gsap.timeline();
+    
+    oldParticles.forEach((particle, index) => {
+      scatterTl.to(particle, {
+        x: (Math.random() - 0.5) * 200,
+        y: (Math.random() - 0.5) * 200,
+        rotation: Math.random() * 360,
+        scale: 0.1,
+        opacity: 0.3,
+        duration: 0.8,
+        ease: 'power2.in',
+        delay: index * 0.01
+      }, 0);
+    });
+    
+    // Phase 2: Morph to new poster
+    scatterTl.to(oldParticles, {
+      backgroundImage: `url('${newPosterUrl}')`,
+      scale: 1,
+      opacity: 1,
+      duration: 0.5,
+      ease: 'power2.out'
+    }, 0.8);
+    
+    // Phase 3: Reassemble into new poster
+    scatterTl.to(oldParticles, {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      duration: 1.2,
+      ease: 'power2.out',
+      onComplete: () => {
+        // Remove particles and show final image
+        posterCarousel.removeChild(particleContainer);
+        const finalImg = document.createElement('img');
+        finalImg.src = newPosterUrl;
+        finalImg.alt = newMovie.title;
+        finalImg.className = 'movie-poster-full carousel-slide';
+        posterCarousel.appendChild(finalImg);
+        
+        // Update title and rating
+        typewriterEffect(titleDiv, newMovie.title);
+        ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
+      }
+    }, 1.3);
+    
+  } else {
+    // Fallback without GSAP
+    const finalImg = document.createElement('img');
+    finalImg.src = newPosterUrl;
+    finalImg.alt = newMovie.title;
+    finalImg.className = 'movie-poster-full carousel-slide';
+    posterCarousel.appendChild(finalImg);
+    typewriterEffect(titleDiv, newMovie.title);
+    ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
+  }
+}
+
+function particleMorphTransition(newPosterUrl, newMovie) {
+  // Get the old poster if it exists
+  const oldImg = posterCarousel.querySelector('img');
+  const oldPosterUrl = oldImg ? oldImg.src : null;
+  
+  // Clear container
+  posterCarousel.innerHTML = '';
+  
+  if (oldPosterUrl) {
+    // Morph from old to new poster
+    createParticleMorph(oldPosterUrl, newPosterUrl, newMovie);
+  } else {
+    // First time, just show the poster
+    const newImg = document.createElement('img');
+    newImg.src = newPosterUrl;
+    newImg.alt = newMovie.title;
+    newImg.className = 'movie-poster-full carousel-slide';
+    posterCarousel.appendChild(newImg);
+    typewriterEffect(titleDiv, newMovie.title);
+    ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
+  }
+}
+
+function seamlessTransition(newPosterUrl, newMovie) {
+  // Get the old poster if it exists
+  const oldImg = posterCarousel.querySelector('img');
+  
+  // Create new image element
+  const newImg = document.createElement('img');
+  newImg.src = newPosterUrl;
+  newImg.alt = newMovie.title;
+  newImg.className = 'movie-poster-full carousel-slide';
+  
+  // Set initial state for seamless transition
+  newImg.style.opacity = '0';
+  newImg.style.transform = 'scale(1.1)';
+  newImg.style.filter = 'blur(10px)';
+  
+  posterCarousel.appendChild(newImg);
+  
+  if (window.gsap) {
+    const tl = gsap.timeline();
+    
+    // Fade out old poster with scale and blur
+    if (oldImg) {
+      tl.to(oldImg, {
+        opacity: 0,
+        scale: 0.95,
+        filter: 'blur(8px)',
+        duration: 0.6,
+        ease: 'power2.inOut'
+      }, 0);
+    }
+    
+    // Fade in new poster with scale and blur
+    tl.to(newImg, {
+      opacity: 1,
+      scale: 1,
+      filter: 'blur(0px)',
+      duration: 0.8,
+      ease: 'power2.out'
+    }, oldImg ? 0.2 : 0);
+    
+    // Remove old poster and update content
+    tl.call(() => {
+      if (oldImg && oldImg.parentNode) {
+        oldImg.parentNode.removeChild(oldImg);
+      }
+      typewriterEffect(titleDiv, newMovie.title);
+      ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
+    }, null, null, 0.8);
+    
+  } else {
+    // Fallback without GSAP
+    if (oldImg && oldImg.parentNode) {
+      oldImg.parentNode.removeChild(oldImg);
+    }
+    newImg.style.opacity = '1';
+    newImg.style.transform = 'scale(1)';
+    newImg.style.filter = 'blur(0px)';
+    typewriterEffect(titleDiv, newMovie.title);
+    ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
+  }
+}
+
 // Card click handler
 card.addEventListener('click', async () => {
   if (isLoading) return;
@@ -197,37 +407,8 @@ card.addEventListener('click', async () => {
     }
   }
   if (loaded) {
-    // Animate carousel: slide out old, slide in new
-    const oldImg = posterCarousel.querySelector('img');
-    if (oldImg) {
-      oldImg.classList.remove('slide-in');
-      oldImg.classList.add('slide-out');
-      // After slide out, remove old and add new
-      setTimeout(() => {
-        posterCarousel.innerHTML = '';
-        const newImg = document.createElement('img');
-        newImg.src = newPosterUrl;
-        newImg.alt = newMovie.title;
-        newImg.className = 'movie-poster-full carousel-slide slide-in';
-        posterCarousel.appendChild(newImg);
-        // After slide in, update title/rating
-        setTimeout(() => {
-          typewriterEffect(titleDiv, newMovie.title);
-          ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
-        }, 600);
-      }, 600);
-    } else {
-      // First time, just show
-      const newImg = document.createElement('img');
-      newImg.src = newPosterUrl;
-      newImg.alt = newMovie.title;
-      newImg.className = 'movie-poster-full carousel-slide slide-in';
-      posterCarousel.appendChild(newImg);
-      setTimeout(() => {
-        typewriterEffect(titleDiv, newMovie.title);
-        ratingDiv.textContent = `⭐ ${getRatingString(newMovie.vote_average)}`;
-      }, 600);
-    }
+    // Animate poster transition with seamless effect
+    seamlessTransition(newPosterUrl, newMovie);
     isFlipped = true;
   } else {
     posterCarousel.innerHTML = `<div class="text-xl text-red-200">Failed to load movie poster after 3 attempts.<br>${lastError ? lastError.message : ''}</div>`;

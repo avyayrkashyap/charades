@@ -70,37 +70,6 @@ body {
   height: 100%;
   top: 0;
   left: 0;
-  transition: transform 0.7s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.7s cubic-bezier(0.77, 0, 0.175, 1);
-}
-.slide-in {
-  transform: translateX(100%);
-  opacity: 0;
-  animation: slideIn 0.7s cubic-bezier(0.77, 0, 0.175, 1) forwards;
-}
-.slide-out {
-  transform: translateX(0);
-  opacity: 1;
-  animation: slideOut 0.7s cubic-bezier(0.77, 0, 0.175, 1) forwards;
-}
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-@keyframes slideOut {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
 }
 #year-bottomsheet {
   box-shadow: 0 -8px 32px 0 #a78bfa44;
